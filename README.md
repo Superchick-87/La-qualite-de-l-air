@@ -10,4 +10,4 @@ Récupération des données (après 14h) :</br>
    * pdf_3cols2M.php
    * send_mail.php
 * datas</br>
-   * nouvelle_aquitaine_demain_YYYY-MM-DD.json</br>cc
+   * nouvelle_aquitaine_demain_YYYY-MM-DD.json</br>
