@@ -19,7 +19,7 @@ Récupération des données (après 14h) :</br>
 │   ├── pictos_V2.svg
 │   └── pub-sponso-1.pdf
 │	├── sources/
-│	│	└── fond-carte.pdf
+│		└── fond-carte.pdf
 ├── includes/
 │   ├── pdf_3cols2M.php
 │   └── send_mail.php
