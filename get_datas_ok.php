@@ -1,17 +1,16 @@
 <?php
-
 // ============================================================================
 // --- CONFIGURATION ---
 // ============================================================================
-set_time_limit(0);
+set_time_limit(120); // éviter les timeouts sur serveur
 
+// --- Ajout des en-têtes pour éviter le cache ---
 header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
 // --- Identifiants Atmo ---
 $username = "nico_so";
 $password = "pey96;98";
-$tokenFile = 'token.json';
 
 $departements = [
     '17' => [
@@ -106,6 +105,7 @@ function getToken($username, $password)
 
 function decodeJwt($jwt)
 {
+    // Un JWT est de la forme header.payload.signature
     $parts = explode('.', $jwt);
     if (count($parts) !== 3) return null;
     $payload = $parts[1];
@@ -129,28 +129,6 @@ function getAtmoData($url, $headers)
     return ['error' => 'HTTP_ERROR', 'code' => $httpCode, 'response' => $response];
 }
 
-function getValidToken($username, $password, $tokenFile)
-{
-    if (file_exists($tokenFile)) {
-        $json = file_get_contents($tokenFile);
-        $data = json_decode($json, true);
-        $token = $data['token'] ?? null;
-        $exp = $data['exp'] ?? 0;
-
-        if ($token && $exp > time()) {
-            return $token;
-        }
-    }
-
-    $newToken = getToken($username, $password);
-    $payload = decodeJwt($newToken);
-    $exp = $payload['exp'] ?? 0;
-
-    file_put_contents($tokenFile, json_encode(['token' => $newToken, 'exp' => $exp]));
-    
-    return $newToken;
-}
-
 // ============================================================================
 // --- SCRIPT PRINCIPAL ---
 // ============================================================================
@@ -159,45 +137,37 @@ $tomorrow = date("Y-m-d", strtotime("+1 day"));
 
 if (!is_dir($dataDir)) mkdir($dataDir, 0777, true);
 
-// 1️⃣ Obtention du token (la fonction gère la réutilisation ou la génération)
-$token = getValidToken($username, $password, $tokenFile);
-
-// --- AFFICHAGE DU TOKEN ET DE SES INFORMATIONS ---
-echo "<h1>Informations sur le token</h1>";
+// 1️⃣ Token
+echo "<h1>Obtention du token...</h1>";
+$token = getToken($username, $password);
 $payload = decodeJwt($token);
+
 if ($payload) {
     $issuedAt = date("Y-m-d H:i:s", $payload['iat']);
     $expiresAt = date("Y-m-d H:i:s", $payload['exp']);
-    $minutesLeft = ceil(($payload['exp'] - time()) / 60); // Calcul du temps restant
-    
     echo "<p><strong>Token :</strong> <code>" . htmlspecialchars($token) . "</code></p>";
     echo "<p>Date de création (iat) : <strong>$issuedAt</strong></p>";
     echo "<p>Date d'expiration (exp) : <strong>$expiresAt</strong></p>";
-    echo "<p>Temps restant : <strong>$minutesLeft minutes</strong></p>"; // Affichage du temps restant
 } else {
     echo "<p>⚠️ Impossible de décoder le token.</p>";
 }
-echo "<hr>";
 
+$headers = ["Authorization: Bearer $token"];
 
 // 2️⃣ Collecte des données
 echo "<h1>Collecte des données...</h1>";
 $finalData = [];
-$headers = ["Authorization: Bearer $token"];
 
 foreach ($departementsRecherches as $numeroDepartement) {
-    if (!isset($departements[$numeroDepartement])) continue;
     $departement = $departements[$numeroDepartement];
-
     foreach ($departement['villes'] as $ville) {
         $insee = $ville['insee'];
-
         $finalData[$insee] = [
             'ville'       => $ville['nom'],
             'departement' => $departement['nom'],
             'type'        => $ville['type'],
             'qualite_air' => null,
-            'pollen'      => null,
+            'pollen'      => null
         ];
 
         // Qualité de l'air
@@ -208,7 +178,7 @@ foreach ($departementsRecherches as $numeroDepartement) {
             ]))
             . "?withGeom=false";
         $airData = getAtmoData($airUrl, $headers);
-        if (!isset($airData['error']) && !empty($airData) && isset($airData['features'][0]['properties'])) {
+        if (!isset($airData['error']) && isset($airData['features'][0]['properties'])) {
             $finalData[$insee]['qualite_air'] = $airData['features'][0]['properties'];
         }
 
@@ -220,12 +190,12 @@ foreach ($departementsRecherches as $numeroDepartement) {
             ]))
             . "?withGeom=false";
         $pollenData = getAtmoData($pollenUrl, $headers);
-        if (!isset($pollenData['error']) && !empty($pollenData) && isset($pollenData['features'][0]['properties'])) {
+        if (!isset($pollenData['error']) && isset($pollenData['features'][0]['properties'])) {
             $finalData[$insee]['pollen'] = $pollenData['features'][0]['properties'];
         }
-        
+
         echo "<p>✔️ Données collectées pour " . htmlspecialchars($ville['nom']) . "</p>";
-        sleep(1);
+        usleep(500000);
     }
 }
 
@@ -238,8 +208,4 @@ if (file_put_contents($fileName, json_encode($finalData, JSON_PRETTY_PRINT)) !==
     echo "<br><h2>❌ Erreur</h2>";
     echo "<p>Impossible d'enregistrer le fichier JSON.</p>";
 }
-
-// 4️⃣ Appel du script d'envoi de mail
 include __DIR__ . '/includes/send_mail.php';
-
-?>
