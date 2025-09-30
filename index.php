@@ -1,124 +1,207 @@
 <?php
 
-// --- FICHIER DE REQUÊTE API POUR LA QUALITÉ DE L'AIR EN NOUVELLE-AQUITAINE ---
+// --- FICHIER POUR LIRE ET AFFICHER LES DONNÉES DU JSON CENTRALISÉ EN VIGNETTES INTERACTIVES ---
 
 // -------------------------------------------------------------------------
-// --- CONFIGURATION ---
+// --- STYLE CSS DE LA PAGE (TEXTE ALIGNÉ À GAUCHE) ---
 // -------------------------------------------------------------------------
-// REMPLACER par le token que vous avez reçu d'Atmo Data.
-$token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTg1NDU3OTQsImV4cCI6MTc1ODYzMjE5NCwicm9sZXMiOlsiUk9MRV9BUEkiLCJST0xFX1VTRVIiXSwidXNlcm5hbWUiOiJuaWNvX3NvIn0.q3DqtcE10hdTetzXAajnshVRRPXyGjoaqwiiGaNXLGvbRzIwBpcYHR7TujFSpvZLVa8LY8ixEl3dkkxL53VBCStut00IlXdNeITWBzmw1iNq6RhZnXnlkcMkoatmeNrQp8Cbo-B3cYeuSp7hbCbAihiGBDDt6Q6LV90iCEmTburl5GbsdYB_W3UvtotWr73tPw1aLpyh_TWRB8BPDsCvXwbD3tu5Y4bzrDyd4YK8YZXwretXbbsIrj6cctjEcioL9z-XV0Hc3tE5AYmRtQ1514XheoXKO6svtIwiuwS-3hl4TBoNcRJW633u5cJ4IXZehUEz2a-r2__Bcz8kN9NvOw";
+echo "<style>
+    body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding: 20px;
+        background-color: #f4f7f9;
+    }
+    .vignette-container {
+        width: 300px;
+        height: 200px;
+        perspective: 1000px;
+        cursor: pointer;
+    }
+    .vignette-inner {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        text-align: left;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+    .vignette-container:hover .vignette-inner {
+        transform: rotateY(180deg);
+    }
+    .vignette-front, .vignette-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        padding: 15px;
+        box-sizing: border-box;
+        text-align: left;
+        transition: background-color 0.6s ease;
+    }
+    .vignette-front {
+        /* La couleur de fond sera définie par le PHP en RGBA */
+    }
+    .vignette-back {
+        transform: rotateY(180deg);
+        background-color: #fff;
+        color: #333;
+    }
+    h1 {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    h2 { margin: 0; font-size: 24px; color: #333; }
+    h3 { margin-top: 10px; margin-bottom: 5px; font-size: 16px; color: #555; }
+    h4 { margin: 0px; }
+    p { margin: 0; font-size: 14px; }
+    .data-section {
+        margin-bottom: 0px;
+    }
+    .pollutant-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        font-size: 12px;
+    }
+    .pollutant-list li {
+        width: 48%;
+        margin-bottom: 5px;
+    }
+</style>";
 
-// Liste des départements et des villes correspondantes avec leurs codes INSEE
-$departements = [
-    '17' => [
-        'nom' => 'Charente-Maritime',
-        'villes' => [
-            ['nom' => 'La Rochelle', 'insee' => '17300', 'type' => 'Préfecture'],
-            ['nom' => 'Jonzac', 'insee' => '17197', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Rochefort', 'insee' => '17299', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Saintes', 'insee' => '17397', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Saint-Jean-d\'Angély', 'insee' => '17347', 'type' => 'Sous-préfecture']
-        ]
-    ],
-    '24' => [
-        'nom' => 'Dordogne',
-        'villes' => [
-            ['nom' => 'Périgueux', 'insee' => '24322', 'type' => 'Préfecture'],
-            ['nom' => 'Bergerac', 'insee' => '24037', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Nontron', 'insee' => '24311', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Sarlat-la-Canéda', 'insee' => '24520', 'type' => 'Sous-préfecture']
-        ]
-    ],
-    '33' => [
-        'nom' => 'Gironde',
-        'villes' => [
-            ['nom' => 'Bordeaux', 'insee' => '33063', 'type' => 'Préfecture'],
-            ['nom' => 'Arcachon', 'insee' => '33009', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Blaye', 'insee' => '33053', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Langon', 'insee' => '33227', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Lesparre-Médoc', 'insee' => '33240', 'type' => 'Sous-préfecture'],
-            ['nom' => 'Libourne', 'insee' => '33243', 'type' => 'Sous-préfecture']
-        ]
-    ]
+// -------------------------------------------------------------------------
+// --- DÉFINITION DU CHEMIN DU FICHIER JSON ET DES CORRESPONDANCES ---
+// -------------------------------------------------------------------------
+$tomorrow = date("Y-m-d", strtotime("+1 day"));
+$fileName = "datas/nouvelle_aquitaine_demain_" . $tomorrow . ".json";
+// $fileName = "datas/nouvelle_aquitaine_demain_2025-09-24.json";
+$correspondanceQualite = [
+    1 => 'Très bon',
+    2 => 'Bon',
+    3 => 'Moyen',
+    4 => 'Médiocre',
+    5 => 'Mauvais',
+    6 => 'Très mauvais'
 ];
 
-// Les départements pour lesquels nous voulons afficher les données
-$departementsRecherches = ['17', '24', '33'];
+// Fonction utilitaire pour convertir un code hexadécimal en RGBA
+function hex2rgba($color, $opacity = false)
+{
+    $default = 'rgb(0,0,0)';
+    if (empty($color)) return $default;
 
-// -------------------------------------------------------------------------
-// --- VARIABLES GÉNÉRALES ET PRÉPARATION DES EN-TÊTES ---
-// -------------------------------------------------------------------------
-// Les variables sont définies ici pour être disponibles partout
-$today = date("Y-m-d"); 
-$tomorrow = date("Y-m-d", strtotime("+1 day"));
-$headers = ["Authorization: Bearer " . $token];
-
-// -------------------------------------------------------------------------
-// --- FONCTION UTILITAIRE POUR LES REQUÊTES ---
-// -------------------------------------------------------------------------
-function getAtmoData($url, $headers) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    if ($httpCode == 200) {
-        return json_decode($response, true);
+    if ($color[0] == '#') {
+        $color = substr($color, 1);
     }
-    return ['error' => 'HTTP_ERROR', 'code' => $httpCode, 'response' => $response];
+
+    if (strlen($color) == 6) {
+        $hex = array($color[0] . $color[1], $color[2] . $color[3], $color[4] . $color[5]);
+    } elseif (strlen($color) == 3) {
+        $hex = array($color[0] . $color[0], $color[1] . $color[1], $color[2] . $color[2]);
+    } else {
+        return $default;
+    }
+
+    $rgb = array_map('hexdec', $hex);
+
+    if ($opacity) {
+        if (abs($opacity) > 1) $opacity = 1.0;
+        $output = 'rgba(' . implode(",", $rgb) . ',' . $opacity . ')';
+    } else {
+        $output = 'rgb(' . implode(",", $rgb) . ')';
+    }
+
+    return $output;
 }
 
-// -------------------------------------------------------------------------
-// --- AFFICHAGE DE LA QUALITÉ DE L'AIR ---
-// -------------------------------------------------------------------------
-echo "<h1>Prévisions de la qualité de l'air pour demain</h1>";
-$airQualityBaseUrl = "https://admindata.atmo-france.org/api/data/112/";
+echo "<h1>Prévisions pour le " . htmlspecialchars($tomorrow) . "</h1>";
 
-foreach ($departementsRecherches as $numeroDepartement) {
-    if (!isset($departements[$numeroDepartement])) continue;
-    $departement = $departements[$numeroDepartement];
-    echo "<h2>" . htmlspecialchars($numeroDepartement) . " - " . htmlspecialchars($departement['nom']) . "</h2>";
-    
-    foreach ($departement['villes'] as $ville) {
-        $params = [
-            "code_zone" => ["operator" => "=", "value" => $ville['insee']],
-            "date_ech" => ["operator" => ">=", "value" => $today] 
-        ];
-        $jsonParams = urlencode(json_encode($params));
-        $url = $airQualityBaseUrl . $jsonParams . "?withGeom=false";
-        
-        $data = getAtmoData($url, $headers);
+// -------------------------------------------------------------------------
+// --- LECTURE ET TRAITEMENT DU FICHIER ---
+// -------------------------------------------------------------------------
+if (!file_exists($fileName)) {
+    echo "<p>Le fichier de données n'a pas été trouvé : " . htmlspecialchars($fileName) . "</p>";
+} else {
+    $jsonData = file_get_contents($fileName);
+    $data = json_decode($jsonData, true);
 
-        if (isset($data['error'])) {
-            echo "<h3>" . htmlspecialchars($ville['type']) . " : " . htmlspecialchars($ville['nom']) . "</h3>";
-            echo "<p>Erreur lors de la récupération des données de qualité de l'air.</p>";
-        } else {
-            echo "<h3>" . htmlspecialchars($ville['type']) . " : " . htmlspecialchars($ville['nom']) . "</h3>";
-            $foundTomorrow = false;
-            if (!empty($data) && isset($data['features'])) {
-                foreach ($data['features'] as $feature) {
-                    if (isset($feature['properties']['date_ech']) && $feature['properties']['date_ech'] === $tomorrow) {
-                        $villeNom = $feature['properties']['lib_zone'];
-                        $couleurCode = $feature['properties']['coul_qual'];
-                        $qualiteLib = $feature['properties']['lib_qual'];
-                        
-                        echo "<div style='display:flex; align-items:center; gap: 10px; font-weight:bold;'>";
-                        echo "  <div style='background-color: " . htmlspecialchars($couleurCode) . "; width: 20px; height: 20px; border-radius: 50%;'></div>";
-                        echo "  <div>" . htmlspecialchars($qualiteLib) . "</div>";
-                        echo "</div>";
-                        $foundTomorrow = true;
-                        break;
-                    }
-                }
+    if (empty($data)) {
+        echo "<p>Le fichier de données est vide ou invalide.</p>";
+    } else {
+        foreach ($data as $insee => $villeData) {
+            $nomVille = $villeData['ville'];
+            $nomDepartement = $villeData['departement'];
+
+            $vignetteColor = 'rgba(255,255,255,0.8)';
+            if ($villeData['qualite_air'] !== null && isset($villeData['qualite_air']['coul_qual'])) {
+                $vignetteColor = hex2rgba($villeData['qualite_air']['coul_qual'], 0.8);
             }
-            if (!$foundTomorrow) {
-                echo "<p>Aucune prévision disponible pour demain.</p>";
+
+            echo "<div class='vignette-container'>";
+            echo "  <div class='vignette-inner'>";
+
+            echo "    <div class='vignette-front' style='background-color: " . htmlspecialchars($vignetteColor) . ";'>";
+            echo "        <h2>" . htmlspecialchars($nomVille) . "</h2>";
+            echo "        <p style='font-size: 14px; color: #666;'>" . htmlspecialchars($nomDepartement) . "</p>";
+            echo "    </div>";
+
+            echo "    <div class='vignette-back'>";
+            echo "        <p style='font-size: 14px; color: #666; font-weight: bold;'>" . htmlspecialchars($nomVille) . " (" . htmlspecialchars($nomDepartement) . ")</p>";
+
+            echo "        <div class='data-section'>";
+            // echo "          <h3>Qualité de l'air</h3>";
+            if ($villeData['qualite_air'] !== null) {
+                $airQualite = $villeData['qualite_air'];
+                $couleurAir = $airQualite['coul_qual'];
+                $libAir = $airQualite['lib_qual'];
+
+                echo "          <div style='display:flex; align-items:center; gap: 10px; font-weight:bold; margin-bottom: 10px; margin-top: 10px;'>";
+                echo "              <div style='background-color: " . htmlspecialchars($couleurAir) . "; width: 20px; height: 20px; border-radius: 50%;'></div>";
+                echo "              <div>Qualité de l'air : " . htmlspecialchars($libAir) . "</div>";
+                echo "          </div>";
+
+                echo "          <ul class='pollutant-list'>";
+                echo "            <li>NO2: " . (isset($correspondanceQualite[$airQualite['code_no2']]) ? $correspondanceQualite[$airQualite['code_no2']] : 'N/A') . "</li>";
+                echo "            <li>O3: " . (isset($correspondanceQualite[$airQualite['code_o3']]) ? $correspondanceQualite[$airQualite['code_o3']] : 'N/A') . "</li>";
+                echo "            <li>PM10: " . (isset($correspondanceQualite[$airQualite['code_pm10']]) ? $correspondanceQualite[$airQualite['code_pm10']] : 'N/A') . "</li>";
+                echo "            <li>PM2.5: " . (isset($correspondanceQualite[$airQualite['code_pm25']]) ? $correspondanceQualite[$airQualite['code_pm25']] : 'N/A') . "</li>";
+                echo "            <li>SO2: " . (isset($correspondanceQualite[$airQualite['code_so2']]) ? $correspondanceQualite[$airQualite['code_so2']] : 'N/A') . "</li>";
+                echo "          </ul>";
+            } else {
+                echo "          <p>Données non disponibles.</p>";
             }
+            echo "        </div>";
+
+            // Section Pollen
+            echo "        <div class='data-section'>";
+            if ($villeData['pollen'] !== null) {
+                $pollenData = $villeData['pollen'];
+                $pollenLib = $pollenData['lib_qual'];
+                // La nouvelle ligne pour afficher les pollens responsables
+                $pollenResp = isset($pollenData['pollen_resp']) ? $pollenData['pollen_resp'] : 'Non spécifié';
+
+                echo "          <p style='font-weight:bold; margin-top: 10px;'>Pollen : " . htmlspecialchars($pollenLib) . "</p>";
+                echo "          <p style='font-size: 12px; line-height: 17px;'>Pollens responsables : " . htmlspecialchars($pollenResp) . "</p>";
+            } else {
+                echo "          <p>Données non disponibles.</p>";
+            }
+            echo "        </div>";
+
+            echo "    </div>";
+            echo "  </div>";
+            echo "</div>";
         }
     }
-    echo "<hr>";
 }
-?>
