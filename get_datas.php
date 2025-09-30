@@ -9,8 +9,15 @@ header("Cache-Control: no-cache, must-revalidate");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
 // --- Identifiants Atmo ---
-$username = "nico_so";
-$password = "pey96;98";
+// --- Définition des identifiants à partir du fichier .env ---
+$username = getenv('ATMO_USERNAME');
+$password = getenv('ATMO_PASSWORD');
+
+// Si les variables ne sont pas définies, on arrête le script.
+if (!$username || !$password) {
+    die("❌ Identifiants manquants. Créez un fichier .env avec ATMO_USERNAME et ATMO_PASSWORD.");
+}
+
 $tokenFile = 'token.json';
 
 $departements = [
