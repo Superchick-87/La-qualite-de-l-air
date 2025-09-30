@@ -3,3 +3,5 @@
 Récupération des données (après 14h) :</br>
 "get_datas.php"</br>
 (Une prévision de l’indice ATMO du jour et du lendemain est publiée quotidiennement à 14h00.)</br>
+
+## Organisation des fichiers
