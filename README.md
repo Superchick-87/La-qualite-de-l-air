@@ -9,6 +9,8 @@ Récupération des données (après 14h) :</br>
 .
 ├── index.php
 ├── get_datas.php
+├── .env
+├── token.json
 ├── README.md
 ├── datas/
 │	└── nouvelle_aquitaine_demain_yyyy-mm-dd.json
