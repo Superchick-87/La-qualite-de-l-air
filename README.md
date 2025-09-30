@@ -7,10 +7,24 @@ Récupération des données (après 14h) :</br>
 ### Organisation des fichiers
 ```text
 .
-  ├── datas/
-  │   └── nouvelle_aquitaine_demain_YYYY-MM-DD.json
-  ├── includes/
-  │   ├── pdf_3cols2M.php
-  │   └── send_mail.php
-  └── index.php
-  └── get_datas.php
+├── index.php
+├── get_datas.php
+├── README.md
+├── datas/
+├── fonts/
+├── images/
+│   ├── Plan de travail 1 copie 3.svg
+│   ├── fond-carte.pdf
+│   ├── pictos.svg
+│   ├── pictos_V2.svg
+│   └── pub-sponso-1.pdf
+│	├── sources/
+│	│	└── fond-carte.pdf
+├── includes/
+│   ├── pdf_3cols2M.php
+│   └── send_mail.php
+├── ProductionPdf
+│   └── Infog_Qualite_Air_01-10-2025.pdf
+├── PHPMailer/
+├── TCPDF-master/
+└── vendor/
